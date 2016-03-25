@@ -48,7 +48,7 @@ Public Function MDBX(sDate As Date, AccountName As String, sFldLst As String) As
     
   '  If oCnn Is Nothing Then
       Set oCnn = New ADODB.Connection
-      oCnn.ConnectionString = "Provider=SQLOLEDB;Data Source=w2k3dbmrap1;Initial Catalog=mraTest;Trusted_Connection=yes;"
+      oCnn.ConnectionString = "Provider=SQLOLEDB;Data Source=FHCDBGENMP04\MRAP1;Initial Catalog=mraTest;Trusted_Connection=yes;"
       oCnn.Open    'Create your recordset
    ' End If
     
@@ -138,7 +138,7 @@ Public Function MDB(sDate As Date, cusip As String, sFld As String, Optional cus
     
   '  If oCnn Is Nothing Then
       Set oCnn = New ADODB.Connection
-      oCnn.ConnectionString = "Provider=SQLOLEDB;Data Source=w2k3dbmrap1;Initial Catalog=mraTest;Trusted_Connection=yes;"
+      oCnn.ConnectionString = "Provider=SQLOLEDB;Data Source=FHCDBGENMP04\MRAP1;Initial Catalog=mraTest;Trusted_Connection=yes;"
       oCnn.Open    'Create your recordset
    ' End If
         

@@ -47,18 +47,18 @@ Private Sub btnGetMarket_Click()
     
     Select Case sCurvetype
       Case "SWAP_CURVE"
-        sSQL = "select distinct b.pricing_date, a.term_in_month as terms,a.coupon as rate from mr_point a inner join market_rate b on a.mr_key = b.mr_key where section = '" & cboCurveType.SelText & "' "
+        sSQL = "select distinct b.pricing_date, a.term_in_month as terms,a.coupon as rate from polyMr_point a inner join polyMarket_rate b on a.mr_key = b.mr_key where a.currency='USD' and section = '" & cboCurveType.SelText & "' "
       Case "UST_CURVE"
-        sSQL = "select  distinct b.pricing_date, a.term_in_month as terms,a.coupon as rate from mr_point a inner join market_rate b on a.mr_key = b.mr_key where section = '" & cboCurveType.SelText & "' "
+        sSQL = "select  distinct b.pricing_date, a.term_in_month as terms,a.coupon as rate from polyMr_point a inner join polyMarket_rate b on a.mr_key = b.mr_key where a.currency='USD' and section = '" & cboCurveType.SelText & "' "
       Case "AGENCY"
-        sSQL = "select  distinct  b.pricing_date, a.term_in_month as terms,a.coupon as rate from mr_point a inner join market_rate b on a.mr_key = b.mr_key where section = '" & cboCurveType.SelText & "' and Code='AGENCY_YIELD_CURVE' "
+        sSQL = "select  distinct  b.pricing_date, a.term_in_month as terms,a.coupon as rate from polyMr_point a inner join polyMarket_rate b on a.mr_key = b.mr_key where a.currency='USD' and section = '" & cboCurveType.SelText & "' and Code='AGENCY_YIELD_CURVE' "
         iDividor = CInt(txtDividor.Text)
       Case "Index"
-        sSQL = "select  distinct  b.pricing_date, Code as IndexName,a.coupon as rate from mr_point a inner join market_rate b on a.mr_key = b.mr_key where section = '" & cboCurveType.SelText & "' "
+        sSQL = "select  distinct  b.pricing_date, Code as IndexName,a.coupon as rate from polyMr_point a inner join polyMarket_rate b on a.mr_key = b.mr_key where a.currency='USD' and section = '" & cboCurveType.SelText & "' "
       Case "SWAPTION_VOLS"
-        sSQL = "select  distinct  b.pricing_date, a.term_in_month as terms,a.coupon as rate from mr_point a inner join market_rate b on a.mr_key = b.mr_key where section = '" & cboCurveType.SelText & "' and cast(Code as numeric(5,2)) =" & Trim(txtTenor.Text) & " "
+        sSQL = "select  distinct  b.pricing_date, a.term_in_month as terms,a.coupon as rate from polyMr_point a inner join polyMarket_rate b on a.mr_key = b.mr_key where a.currency='USD' and section = '" & cboCurveType.SelText & "' and cast(Code as numeric(5,2)) =" & Trim(txtTenor.Text) & " "
       Case "CAP_VOLS"
-          sSQL = "select  distinct  b.pricing_date,a.term_in_month as terms,a.coupon as rate from mr_point a inner join market_rate b on a.mr_key = b.mr_key where section = '" & cboCurveType.SelText & "' and cast(Code as numeric(5,2)) =" & Trim(txtTenor.Text) & " "
+          sSQL = "select  distinct  b.pricing_date,a.term_in_month as terms,a.coupon as rate from polyMr_point a inner join polyMarket_rate b on a.mr_key = b.mr_key where a.currency='USD' and section = '" & cboCurveType.SelText & "' and cast(Code as numeric(5,2)) =" & Trim(txtTenor.Text) & " "
     End Select
     
     If txtSelectiveDates_mkt.Text = "" Then
@@ -84,8 +84,9 @@ ErrorHandler:
     
 End Sub
 
-
-
+' Hua 20090908 Added iRecCnt and use the record count to calculate the column position.
+'     dropped chkBreakDate.Value; use bBreakDate as the only control;
+'     update iStartRow for breakDate and set "pricing Date" cell.
 Public Function GetData_Market(sSheetName As String, sCellName As String, sSQL As String, iDividor As Integer, sTitle As String, bBreakDate As Boolean) As String
 
     
@@ -97,6 +98,7 @@ Public Function GetData_Market(sSheetName As String, sCellName As String, sSQL A
     
     Dim iStartRow As Integer
     Dim iStartCol As Integer
+    Dim iRecCnt As Integer
     
     iStartRow = Sheets(sSheetName).Range(sCellName).Row
     iStartCol = Sheets(sSheetName).Range(sCellName).Column
@@ -110,40 +112,37 @@ Public Function GetData_Market(sSheetName As String, sCellName As String, sSQL A
         Sheets(sSheetName).Cells(iStartRow, iStartCol).Value = "Pricing Date"
         
         j = iStartRow + 1
-        i = iStartCol + 1
+        iRecCnt = 1
         sprevDate = CStr(oRs.Fields("pricing_date").Value)
         Sheets(sSheetName).Cells(iStartRow + 1, iStartCol).Value = CStr(oRs.Fields("pricing_date").Value)
         While Not oRs.EOF
-           If i Mod iDividor = 0 Then
-             Sheets(sSheetName).Cells(j, CInt(i / iDividor)).Value = oRs.Fields("rate").Value
+           If iRecCnt Mod iDividor = 0 Then
+             Sheets(sSheetName).Cells(j, CInt(iRecCnt / iDividor) + iStartCol).Value = oRs.Fields("rate").Value
           
-             If (j = iStartRow + 1) And chkBreakDate.Value = False Then
-               Sheets(sSheetName).Cells(j - 1, CInt(i / iDividor)).Value = oRs.Fields(1).Value
-               Sheets(sSheetName).Cells(j - 1, CInt(i / iDividor)).Font.Bold = True
-               Sheets(sSheetName).Cells(j - 1, CInt(i / iDividor)).Interior.ColorIndex = 19
-             ElseIf chkBreakDate.Value = True Then
-               Sheets(sSheetName).Cells(j - 1, CInt(i / iDividor) + iStartCol).Value = oRs.Fields(1).Value
-               Sheets(sSheetName).Cells(j - 1, CInt(i / iDividor) + iStartCol).Font.Bold = True
-               Sheets(sSheetName).Cells(j - 1, CInt(i / iDividor) + iStartCol).Interior.ColorIndex = 19
+             If (j = iStartRow + 1) Or bBreakDate Then
+               Sheets(sSheetName).Cells(j - 1, CInt(iRecCnt / iDividor) + iStartCol).Value = oRs.Fields(1).Value
+               Sheets(sSheetName).Cells(j - 1, CInt(iRecCnt / iDividor) + iStartCol).Font.Bold = True
+               Sheets(sSheetName).Cells(j - 1, CInt(iRecCnt / iDividor) + iStartCol).Interior.ColorIndex = 19
              End If
            End If
-           i = i + 1
 
            oRs.MoveNext
            If Not oRs.EOF Then
+             iRecCnt = iRecCnt + 1
              If CStr(oRs.Fields("pricing_date").Value) <> sprevDate Then
                
                If bBreakDate Then
-                  iStartRow = j + 1
-                  Sheets(sSheetName).Cells(iStartRow, iStartCol).Value = sTitle
-                  j = j + 2
+                  iStartRow = j + 2
+                  Sheets(sSheetName).Cells(iStartRow - 1, iStartCol).Value = sTitle
+                  j = iStartRow
+                  Sheets(sSheetName).Cells(iStartRow, iStartCol).Value = "Pricing Date"
                End If
             
-               i = iStartCol + 1
+               iRecCnt = 1
                j = j + 1
                sprevDate = CStr(oRs.Fields("pricing_date").Value)
               
-             Sheets(sSheetName).Cells(j, iStartCol).Value = oRs.Fields("pricing_date").Value
+               Sheets(sSheetName).Cells(j, iStartCol).Value = oRs.Fields("pricing_date").Value
              End If
            End If
         Wend
@@ -240,8 +239,6 @@ ErrorHandler:
     MsgBox "Error Occurs: " & Err.Description
     setStatus Err.Description
 End Sub
-
-
 Public Function GetData_MTMPorts(sSheetName As String, sCellName As String, sSQL As String) As String
     Dim oRs As ADODB.Recordset
     Dim i As Long
@@ -281,8 +278,6 @@ ErrorHandler:
     GetData_MTMPorts = Err.Description
     
 End Function
-
-
 
 Private Sub cmdGetPrice_Click()
     Dim oRs As ADODB.Recordset
@@ -334,13 +329,13 @@ Private Sub cmdGetPrice_Click()
               Dim sDateCol As String
               
               If sChosenFields = "Risk" Then
-                sSQL = "select distinct pricingdate as pricing_date, cusip, price from dbo.masterrawdata "
+                sSQL = "select distinct pricingdate as asOfDate, cusip, price from dbo.masterrawdata "
                 sDateCol = "pricingdate"
                 sStartDate = Format(sStartDate, "YYYYMMDD")
                 sEndDate = Format(sEndDate, "YYYYMMDD")
               ElseIf sChosenFields = "IDC" Then
-                sSQL = "select pricing_date, cusip, price from dbo.idc_prices "
-                sDateCol = "pricing_date"
+                sSQL = "select asOfDate, cusip, price from dbo.idcPrice "
+                sDateCol = "asOfDate"
               End If
               
             If sCusipLst <> "" Then
@@ -365,7 +360,7 @@ Private Sub cmdGetPrice_Click()
                 
                 While Not oRs.EOF
                    
-                     Sheets(sSheetName).Cells(j, i).Value = CStr(oRs.Fields("pricing_date").Value)
+                     Sheets(sSheetName).Cells(j, i).Value = CStr(oRs.Fields("asOfDate").Value)
                      Sheets(sSheetName).Cells(j, i + 1).Value = oRs.Fields("cusip").Value
                      Sheets(sSheetName).Cells(j, i + 2).Value = oRs.Fields("price").Value
                   
@@ -785,7 +780,8 @@ Public Function GetConn() As ADODB.Connection
 
     Set oCnn = New ADODB.Connection
     
-     oCnn.ConnectionString = gDBConnectStr ' "Provider=SQLOLEDB;Data Source=w2k3dbmrap1;Initial Catalog=mradb;Trusted_Connection=yes;"
+     oCnn.ConnectionString = gDBConnectStr ' "Provider=SQLOLEDB;Data Source=w2k3dbmrap1;Initial Catalog=mraTest;Trusted_Connection=yes;"
+     'oCnn.ConnectionString = gDBConnectStr ' "Provider=SQLOLEDB;Data Source=w2k3dbmrap1;Initial Catalog=mradb;Trusted_Connection=yes;"
      'Integrated Security=SSPI;"
     ' "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=" & GetDBName() & ";User Id=admin;Password=;"
     oCnn.Open    'Create your recordset
